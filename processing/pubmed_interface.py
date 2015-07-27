@@ -2,7 +2,7 @@
 """
 Created on Sun Jul 26 18:45:35 2015
 
-@author: Claire
+@author: Claire Tang
 """
 import urllib
 from bs4 import BeautifulSoup
@@ -42,13 +42,13 @@ class PubMedObject:
 import requests
 import json
 
-def search_pubmed(term):
-    payload = {'db': 'pubmed', 'retmode': 'json', 'term': term, 'retmax': 250}
+def search_pubmed(term, retmax=250):
+    payload = {'db': 'pubmed', 'retmode': 'json', 'term': term, 'retmax': retmax}
     r = requests.get('http://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi', payload)
     return [doi for doi in json.loads(r.text)['esearchresult']['idlist']]
 
-def search_pubmed_author(author):
-    return search_pubmed(author + '[Full Author Name]')
+def search_pubmed_author(author, retmax=250):
+    return search_pubmed(author + '[Full Author Name]', retmax=retmax)
     
     
         
