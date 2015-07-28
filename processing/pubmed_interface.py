@@ -25,7 +25,6 @@ class PubMedObject:
         response = urllib.request.urlopen(urllib.request.Request(self.pubmed_url))
         self.html_file = response.read()
         response.close()
-        print(self.html_file)
         
     def fill_data(self):
         soup = BeautifulSoup(self.html_file, 'xml')

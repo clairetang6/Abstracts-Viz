@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang='en'>
+	<head>
+		<meta charset='utf-8'>
+		<title>Visualizing Research Papers</title>
+		<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.6/d3.min.js"></script>
+		<style>
+			#tooltip {
+				position: absolute;
+				width: 1000px;
+				height: auto;
+				padding: 10px;
+				background-color: white;
+				pointer-events: none;
+				font-family: sans-serif;
+			}
+			
+			#tooltip.hidden {
+				display: none;
+			}
+			
+			#canvas-container {
+				width: 60%;
+				height: 90vh;
+				margin: 0 auto;
+				display: flex;
+				justify-content: center;
+				align-items: center;
+			}
+			
+		</style>
+	</head>
+	<body>
+		<div id="canvas-container">
+			<script type="text/javascript" src={{ url_for('static', filename='viz.js')}}></script>
+		</div>
+		<div id="tooltip" class="hidden">
+			<p><span id="name"></span></p>
+		</div>		
+	</body>
+</html>	
