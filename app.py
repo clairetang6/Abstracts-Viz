@@ -19,14 +19,19 @@ def output():
 	try:
 		with open('%s.txt'%name.replace(' ', '') , 'r') as f:
 			data = json.load(f)
-			print(data.keys())
-			app.vars['dataset'] = abstract_distance.get_dataset(data['titles'], data['abstracts'])
+			titles = data['titles']
+			abstracts = data['abstracts']
+
 	except:
 		print('exception')
 		titles, abstracts = abstract_distance.save_abstracts_and_titles(name)
+	
+	if len(abstracts) > 0:	
 		app.vars['dataset'] = abstract_distance.get_dataset(titles, abstracts)
-	finally:	
 		return render_template('viz.html')
+	else:
+		return 'No abstracts'
+		
  
 @app.route("/dataset")
 def dataset():

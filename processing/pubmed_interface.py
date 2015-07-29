@@ -23,7 +23,10 @@ class PubMedObject:
         
     def download(self):
         response = urllib.request.urlopen(urllib.request.Request(self.pubmed_url))
-        self.html_file = response.read()
+        try: 
+            self.html_file = response.read()
+        except: 
+            print('error reading response from pubmed url');
         response.close()
         
     def fill_data(self):
