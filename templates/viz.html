@@ -3,13 +3,16 @@
 	<head>
 		<meta charset='utf-8'>
 		<title>Visualizing Research Papers</title>
+		<link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
 		<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.6/d3.min.js"></script>
 		<style>
 			#tooltip {
-				position: absolute;
+				position: fixed;
 				width: 1000px;
 				height: auto;
 				padding: 10px;
+				bottom: 1em;
+				left: 1em;
 				background-color: white;
 				pointer-events: none;
 				font-family: sans-serif;
@@ -20,7 +23,7 @@
 			}
 			
 			#canvas-container {
-				width: 80%;
+				width: 95%;
 				height: 90vh;
 				margin: 0 auto;
 				display: flex;
@@ -28,9 +31,19 @@
 				align-items: center;
 			}
 			
+			#scientist {
+				padding-top: 2em;
+				text-align: center;
+				font-family: sans-serif;
+				font-size: large;
+			}
+			
 		</style>
 	</head>
 	<body>
+		<div id="scientist">
+			{{ name }}
+		</div>
 		<div id="canvas-container">
 			<script type="text/javascript" src={{ url_for('static', filename='viz.js')}}></script>
 		</div>

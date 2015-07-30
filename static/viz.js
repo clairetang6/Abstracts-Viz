@@ -13,7 +13,12 @@ var rect = svg.append("rect")
     .attr("width", width)
     .attr("height", height)
     .style("fill", "none")
-    .style("pointer-events", "all");
+    .style("pointer-events", "all")
+	.on("mousedown", function(){
+		if(force){
+			force.alpha(0.15);
+		}
+	})
 
 
 var container = svg.append("g");
@@ -55,7 +60,7 @@ function getLinksFromDistanceMatrix(dataset, threshold){
 
 function buildForceLayout(){
 	force = d3.layout.force()
-					.gravity(0.08)
+					.gravity(0)
 					.charge(-60)
 					.nodes(dataset.nodes)
 					.links(dataset.edges)
@@ -63,7 +68,10 @@ function buildForceLayout(){
 						return d.distance * 60;	
 					})
 					.size([width, height])
-					.start()	
+					.start()
+					
+	force.gravityX = 0.075;
+	force.gravityY = 0.08;
 
 	edges = container.append("g")
 				.selectAll("line")
@@ -109,6 +117,9 @@ function buildForceLayout(){
 			if(d.normYear != - 1){
 				d.x += (d.normYear - 0.5) * 10 * e.alpha;	
 			}
+			
+			d.y += (height/2 - d.y) * e.alpha * force.gravityY;
+			d.x += (width/2 - d.x) * e.alpha * force.gravityX;
 
 		});
 		

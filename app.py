@@ -29,7 +29,7 @@ def output():
 	
 	if len(abstracts) > 0:	
 		app.vars['dataset'] = abstract_distance.get_dataset(titles, abstracts, years)
-		return render_template('viz.html')
+		return render_template('viz.html', name=app.vars['name'])
 	else:
 		return 'No abstracts'
 		
