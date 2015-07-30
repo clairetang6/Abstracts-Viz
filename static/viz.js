@@ -1,4 +1,4 @@
-var width = 700;
+var width = 900;
 var height = 600;
 
 var dataset;
@@ -22,6 +22,9 @@ var force;
 var nodes;
 var edges;
 
+var color = d3.scale.linear()
+			.domain([0, 0.5, 1])
+			.range([d3.rgb(230, 230, 120), d3.rgb(120,205,180), d3.rgb(44,127,184)]);
 
 
 d3.json("/dataset", function(err, json){
@@ -81,12 +84,18 @@ function buildForceLayout(){
 					.attr("r", 10)
 					.style("stroke", "white")
 					.style("stroke-width", 2)
-					.style("fill", "red")
+					.style("fill", function(d){
+						if(d.normYear == -1){
+							return 'black'
+						}else{
+							return color(d.normYear);
+						}
+					})
 					.call(force.drag)
 					.on("mouseover", function(d){
 						d3.select("#tooltip")
 							.select("#name")
-							.text(d.name);
+							.text(d.name + '  ' + d.year);
 						d3.select("#tooltip")
 							.classed("hidden", false);
 					})
@@ -94,7 +103,15 @@ function buildForceLayout(){
 	
 					
 					
-	force.on("tick", function() {			 
+	force.on("tick", function(e){
+		
+		dataset.nodes.forEach( function(d) {
+			if(d.normYear != - 1){
+				d.x += (d.normYear - 0.5) * 10 * e.alpha;	
+			}
+
+		});
+		
 		edges.attr("x1", function(d) { return d.source.x})
 			.attr("x2", function(d) { return d.target.x})
 			.attr("y1", function(d) { return d.source.y})

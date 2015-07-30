@@ -39,7 +39,8 @@ class PubMedObject:
         if soup.find('AbstractText'):
             self.abstract = soup.find('AbstractText').string
         if soup.find('PubDate'):
-            self.pub_year = soup.find('PubDate').Year.string
+            if soup.find('PubDate').Year:
+                self.pub_year = soup.find('PubDate').Year.string
             
 import requests
 import json

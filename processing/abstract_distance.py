@@ -15,21 +15,23 @@ from scipy.cluster import hierarchy
 
 stemmer = nltk.stem.porter.PorterStemmer()
 
-def save_abstracts_and_titles(author):
-    dois = pubmed_interface.search_pubmed_author(author, retmax=100)
+def save_abstracts_and_titles(author, retmax=100):
+    dois = pubmed_interface.search_pubmed_author(author, retmax=retmax)
     titles = []
     abstracts = []
+    years = []
     for doi in dois:
         article = pubmed_interface.PubMedObject(doi)
         article.download()
         article.fill_data()
         titles.append(article.title)
         abstracts.append(article.abstract)
+        years.append(article.pub_year)
         
     with open('%s.txt'%author.replace(' ', '') , 'w') as f:
-        json.dump({'titles': titles, 'abstracts': abstracts}, f)
+        json.dump({'titles': titles, 'abstracts': abstracts, 'retmax': retmax, 'years': years}, f)
     
-    return titles, abstracts
+    return titles, abstracts, years
 
 
 def tokenize(text):
@@ -38,7 +40,7 @@ def tokenize(text):
     return stems
 
 
-def get_dataset(titles, abstracts):
+def get_dataset(titles, abstracts, years):
     #separate words with dashes - and then remove punctuation. 
     abstracts = [ab.lower().translate(str.maketrans("-", " ")) for ab in abstracts]
     abstracts = [''.join(c for c in ab if c not in set(string.punctuation)) for ab in abstracts]
@@ -65,7 +67,16 @@ def get_dataset(titles, abstracts):
     ordered_distance_matrix = ordered_distance_matrix[:, ordering]
     ordered_distance_matrix = ordered_distance_matrix[ordering, :]
     
-    dataset = {'nodes': [{'name' : titles[ordering[i]]} for i in range(tfs.shape[0])], 'distance_matrix': np.around(ordered_distance_matrix, decimals=3).tolist()}
+    years = np.array([int(y) if y != '' else np.NaN for y in years])
+    norm_years = (years - np.nanmin(years))/(np.nanmax(years) - np.nanmin(years))
+    years[np.isnan(years)] = -1
+    norm_years[np.isnan(norm_years)] = -1
+    years = years.tolist()
+    norm_years = norm_years.tolist()
+    
+    dataset = {'nodes': [{'name' : titles[ordering[i]], 'year': years[ordering[i]],
+        'normYear': norm_years[ordering[i]]} for i in range(tfs.shape[0])], 
+        'distance_matrix': np.around(ordered_distance_matrix, decimals=3).tolist()}
     
     return dataset
     
