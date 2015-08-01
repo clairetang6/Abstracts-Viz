@@ -25,7 +25,7 @@ def output():
 
 	except:
 		print('exception')
-		titles, abstracts, years = abstract_distance.save_abstracts_and_titles(name)
+		titles, abstracts, years = abstract_distance.save_abstracts_and_titles(name, retmax=200)
 	
 	if len(abstracts) > 0:	
 		app.vars['dataset'] = abstract_distance.get_dataset(titles, abstracts, years)

@@ -36,7 +36,7 @@ d3.json("/dataset", function(err, json){
 	if (err) return console.warn(err);
 	dataset = json;
 	dataset.edges = [];
-	getLinksFromDistanceMatrix(dataset, 0.8);
+	getLinksFromDistanceMatrix(dataset, dataset.nodes.length < 120 ? 0.8 : 0.70);
 	buildForceLayout();
 });
 
@@ -61,7 +61,7 @@ function getLinksFromDistanceMatrix(dataset, threshold){
 function buildForceLayout(){
 	force = d3.layout.force()
 					.gravity(0)
-					.charge(-60)
+					.charge(dataset.nodes.length < 120 ? -60 : -40)
 					.nodes(dataset.nodes)
 					.links(dataset.edges)
 					.linkDistance(function(d){
