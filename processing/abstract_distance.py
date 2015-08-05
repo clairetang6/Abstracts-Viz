@@ -28,7 +28,7 @@ def save_abstracts_and_titles(author, retmax=100):
         abstracts.append(article.abstract)
         years_months.append((article.pub_year, article.pub_month))
         
-    with open('%s.txt'%author.replace(' ', '') , 'w') as f:
+    with open('%s.txt'%author.replace(' ', '').lower() , 'w') as f:
         json.dump({'titles': titles, 'abstracts': abstracts, 'retmax': retmax, 'years_months': years_months}, f)
     
     return titles, abstracts, years_months
@@ -73,7 +73,9 @@ def get_dataset(titles, abstracts, years_months):
     months[np.isnan(years)] = np.NaN
     
     pub_time = years + (months - 1)/12
-    norm_years = (pub_time - np.nanmin(pub_time))/(np.nanmax(pub_time) - np.nanmin(pub_time))
+    min_pub_time = np.nanmin(years)
+    range_pub_time = np.nanmax(years) + 1 - np.nanmin(years)
+    norm_years = (pub_time - min_pub_time)/range_pub_time
     years[np.isnan(years)] = -1
     norm_years[np.isnan(norm_years)] = -1
     years = years.tolist()
@@ -81,7 +83,9 @@ def get_dataset(titles, abstracts, years_months):
     
     dataset = {'nodes': [{'name' : titles[ordering[i]], 'year': years[ordering[i]],
         'normYear': norm_years[ordering[i]]} for i in range(tfs.shape[0])], 
-        'distance_matrix': np.around(ordered_distance_matrix, decimals=3).tolist()}
+        'distance_matrix': np.around(ordered_distance_matrix, decimals=3).tolist(),
+        'minYear': {'year': np.nanmin(years), 'normYear': (np.nanmin(years) - min_pub_time)/range_pub_time},
+        'maxYear': {'year': np.nanmax(years), 'normYear': (np.nanmax(years) - min_pub_time)/range_pub_time}}
     
     return dataset
     

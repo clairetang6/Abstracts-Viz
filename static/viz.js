@@ -19,9 +19,15 @@ var rect = svg.append("rect")
 			force.alpha(0.15);
 		}
 	})
+	.on("mouseleave", function(){
+		if(colorbar){
+			colorbar.defaultSelectedYear();
+		}		
+	});
 
 
-var container = svg.append("g");
+var container = svg.append("g")
+				.attr("transform", "translate(0, -" + (0.1 * height) + ")");
 
 var force; 
 var nodes;
@@ -30,7 +36,7 @@ var edges;
 var color = d3.scale.linear()
 			.domain([0, 0.5, 1])
 			.range([d3.rgb(230, 230, 120), d3.rgb(120,205,180), d3.rgb(44,127,184)]);
-
+var colorbar;
 
 d3.json("/dataset", function(err, json){
 	if (err) return console.warn(err);
@@ -38,8 +44,49 @@ d3.json("/dataset", function(err, json){
 	dataset.edges = [];
 	getLinksFromDistanceMatrix(dataset, dataset.nodes.length < 120 ? 0.8 : 0.70);
 	buildForceLayout();
+	showYearColorBar();
 });
 
+function showYearColorBar(){
+	colorbar = new Colorbar();
+	colorbar.colorbarGroup = svg.append("g")
+					.selectAll("rect")
+					.data(colorbar.years)
+					.enter()
+					.append("rect")
+					.attr("width", colorbar.colorWidth)
+					.attr("height", colorbar.colorbarHeight)
+					.attr("y", 0.8 * height)
+					.attr("x", function(d, i){
+						return colorbar.startX + i * colorbar.colorWidth;
+					})
+					.attr("fill", function(d){
+						return color(colorbar.yearScale(d));
+					});
+	
+					
+	colorbar.colorbarLabels = svg.append("g").selectAll("text")
+				.data(colorbar.selectedYear)
+				.enter()
+				.append("text")
+				.attr("font-family", "sans-serif")
+				.attr("x", function(d, i){
+					return colorbar.startX + (i * colorbar.colorWidth * colorbar.numRects);
+				})
+				.attr("y", 0.80 * height + colorbar.colorbarHeight + 10)
+				.attr("text-anchor", function(d){
+					if (d.anchor){
+						return d.anchor;
+					}else{
+						return 'center';
+					}
+				})
+				.attr("alignment-baseline", "hanging")
+				.attr("fill", "#888")
+				.text(function(d){
+					return d.year;
+				});
+}
 
 function getLinksFromDistanceMatrix(dataset, threshold){
 	dataset.edges = [];
@@ -57,7 +104,6 @@ function getLinksFromDistanceMatrix(dataset, threshold){
 	return dataset.edges.length;
 }
 
-
 function buildForceLayout(){
 	force = d3.layout.force()
 					.gravity(0)
@@ -67,7 +113,7 @@ function buildForceLayout(){
 					.linkDistance(function(d){
 						return d.distance * 60;	
 					})
-					.size([width, height])
+					.size([1, 0.7])
 					.start()
 					
 	force.gravityX = 0.075;
@@ -106,13 +152,13 @@ function buildForceLayout(){
 							.text(d.name + '  ' + d.year);
 						d3.select("#tooltip")
 							.classed("hidden", false);
+						if(colorbar){
+							colorbar.updateSelectedYear(d.year, d.normYear);
+						}
 					})
 					.on("mousedadown", function(){d3.event.stopPropagation(); });
-	
-					
-					
+				
 	force.on("tick", function(e){
-		
 		dataset.nodes.forEach( function(d) {
 			if(d.normYear != - 1){
 				d.x += (d.normYear - 0.5) * 10 * e.alpha;	
@@ -130,12 +176,88 @@ function buildForceLayout(){
 		
 		nodes.attr("cx", function(d) { return d.x; })
 	     	.attr("cy", function(d) { return d.y; });
-	
-	});
-		
+	});	
 }
-		
-					
 
+var Colorbar = function(){
+	this.yearScale = d3.scale.linear()
+				.domain([dataset.minYear.year, dataset.maxYear.year])
+				.range([dataset.minYear.normYear, dataset.maxYear.normYear]);
+	
+	this.minYear = dataset.minYear.year;
+	this.maxYear = dataset.maxYear.year;
+	this.numRects = 20;
 
+	this.years = [];
+	for (var i = this.minYear; i < this.maxYear; i = i+((this.maxYear-this.minYear)/this.numRects)){
+		this.years.push(i);
+	}
+	
+	this.startX = 0.15 * width;
+	this.colorbarWidth = 0.7 * width;
+	this.colorbarHeight = 25;
+	this.colorWidth = this.colorbarWidth/this.years.length;
+	
+	this.xScale = d3.scale.linear()
+				.domain([dataset.minYear.normYear, dataset.maxYear.normYear])
+				.range([this.startX, this.startX + this.colorbarWidth]);
+	
+	this.selectedYear = [{'year': this.minYear, 'anchor': 'start'},
+					{'year': this.maxYear, 'anchor': 'end'}];
+}
 
+Colorbar.prototype.updateSelectedYear = function(year, normYear){
+	this.selectedYear = [{'year': year, 'normYear': normYear}]
+	this.colorbarLabels = this.colorbarLabels.data(this.selectedYear);
+	var xScale = this.xScale;
+	
+	this.colorbarLabels.transition()
+				.text(function(d){
+					return d.year;
+				})
+				.attr("x", function(d){
+					return xScale(d.normYear);
+				})
+				.attr("text-anchor", function(d){
+					if (d.anchor){
+						return d.anchor;
+					}else{
+						return 'center';
+					}
+				});
+	
+	this.colorbarLabels.exit().remove();			
+}
+
+Colorbar.prototype.defaultSelectedYear = function(){
+	this.selectedYear = [{'year': this.minYear, 'anchor': 'start'},
+					{'year': this.maxYear, 'anchor': 'end'}];
+			
+	this.colorbarLabels = this.colorbarLabels
+				.data(this.selectedYear);
+				
+	this.colorbarLabels.enter()
+				.append("text")
+				.attr("y", 0.80 * height + this.colorbarHeight + 10)
+				.attr("text-anchor", function(d){
+					if (d.anchor){
+						return d.anchor;
+					}else{
+						return 'center';
+					}
+				})
+				.attr("alignment-baseline", "hanging")
+				.attr("fill", "#888")
+				
+	var startX = this.startX;
+	var colorWidth = this.colorWidth;
+	var numRects = this.numRects;
+	this.colorbarLabels.transition()
+				.attr("font-family", "sans-serif")
+				.attr("x", function(d, i){
+					return startX + (i * colorWidth * numRects);
+				})
+				.text(function(d){
+					return d.year;
+				});	
+}
