@@ -21,14 +21,14 @@ def output():
 			data = json.load(f)
 			titles = data['titles']
 			abstracts = data['abstracts']
-			years = data['years']
+			years_months = data['years_months']
 
 	except:
 		print('exception')
-		titles, abstracts, years = abstract_distance.save_abstracts_and_titles(name, retmax=200)
+		titles, abstracts, years_months = abstract_distance.save_abstracts_and_titles(name, retmax=200)
 	
 	if len(abstracts) > 0:	
-		app.vars['dataset'] = abstract_distance.get_dataset(titles, abstracts, years)
+		app.vars['dataset'] = abstract_distance.get_dataset(titles, abstracts, years_months)
 		return render_template('viz.html', name=app.vars['name'])
 	else:
 		return 'No abstracts'

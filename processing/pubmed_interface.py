@@ -7,19 +7,18 @@ Created on Sun Jul 26 18:45:35 2015
 import urllib
 from bs4 import BeautifulSoup
 
-class PubMedObject:
-    doi = ''
-    pubmed_url = ''
-    html_file = ''
-    
-    title = ''
-    journal = ''
-    abstract = ''
-    pub_year = ''
+class PubMedObject:    
+    month_dict = {'Jan': 1, 'Feb': 2, 'Mar': 3, 'Apr': 4, 'May': 5, 'Jun': 6, 'Jul': 7, 'Aug': 8, 'Sep': 9, 'Oct': 10, 'Nov': 11, 'Dec': 12}
     
     def __init__(self, doi):
         self.doi = doi.strip()
         self.pubmed_url = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&id=' + self.doi + '&retmode=xml&rettype=abstract'
+        self.html_file = ''
+        self.title = ''
+        self.journal = ''
+        self.abstract = ''
+        self.pub_year = ''
+        self.pub_month = ''
         
     def download(self):
         response = urllib.request.urlopen(urllib.request.Request(self.pubmed_url))
@@ -41,6 +40,10 @@ class PubMedObject:
         if soup.find('PubDate'):
             if soup.find('PubDate').Year:
                 self.pub_year = soup.find('PubDate').Year.string
+            if soup.find('PubDate').Month:
+                self.pub_month = PubMedObject.month_dict[soup.find('PubDate').Month.string.strip()]
+            else:
+                self.pub_month = 6
             
 import requests
 import json
