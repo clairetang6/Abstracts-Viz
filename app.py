@@ -25,7 +25,7 @@ def output():
 			pmids = data['pmids']
 
 	except:
-		print('exception')
+		print('no data for ' + name + ', getting abstracts now')
 		titles, abstracts, years_months, pmids = abstract_distance.save_abstracts_and_titles(name, retmax=200)
 	
 	if len(abstracts) > 0:	
