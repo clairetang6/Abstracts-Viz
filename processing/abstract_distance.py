@@ -72,9 +72,12 @@ def get_dataset(titles, abstracts, years_months):
     months = np.array([int(m) if m != '' else np.NaN for m in months]).astype('float')
     months[np.isnan(years)] = np.NaN
     
+    max_year = np.nanmax(years)
+    min_year = np.nanmin(years)
+    
     pub_time = years + (months - 1)/12
-    min_pub_time = np.nanmin(years)
-    range_pub_time = np.nanmax(years) + 1 - np.nanmin(years)
+    min_pub_time = min_year
+    range_pub_time = max_year + 1 - min_year
     norm_years = (pub_time - min_pub_time)/range_pub_time
     years[np.isnan(years)] = -1
     norm_years[np.isnan(norm_years)] = -1
@@ -84,8 +87,8 @@ def get_dataset(titles, abstracts, years_months):
     dataset = {'nodes': [{'name' : titles[ordering[i]], 'year': years[ordering[i]],
         'normYear': norm_years[ordering[i]]} for i in range(tfs.shape[0])], 
         'distance_matrix': np.around(ordered_distance_matrix, decimals=3).tolist(),
-        'minYear': {'year': np.nanmin(years), 'normYear': (np.nanmin(years) - min_pub_time)/range_pub_time},
-        'maxYear': {'year': np.nanmax(years), 'normYear': (np.nanmax(years) - min_pub_time)/range_pub_time}}
+        'minYear': {'year': min_year, 'normYear': (min_year - min_pub_time)/range_pub_time},
+        'maxYear': {'year': max_year + 1, 'normYear': (max_year + 1 - min_pub_time)/range_pub_time}}
     
     return dataset
     

@@ -107,7 +107,7 @@ function getLinksFromDistanceMatrix(dataset, threshold){
 function buildForceLayout(){
 	force = d3.layout.force()
 					.gravity(0)
-					.charge(dataset.nodes.length < 120 ? -60 : -40)
+					.charge(dataset.nodes.length < 100 ? -60 : -40)
 					.nodes(dataset.nodes)
 					.links(dataset.edges)
 					.linkDistance(function(d){
@@ -185,7 +185,7 @@ var Colorbar = function(){
 				.range([dataset.minYear.normYear, dataset.maxYear.normYear]);
 	
 	this.minYear = dataset.minYear.year;
-	this.maxYear = dataset.maxYear.year;
+	this.maxYear = dataset.maxYear.year - 1;
 	this.numRects = 20;
 
 	this.years = [];
