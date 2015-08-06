@@ -10,9 +10,9 @@ from bs4 import BeautifulSoup
 class PubMedObject:    
     month_dict = {'Jan': 1, 'Feb': 2, 'Mar': 3, 'Apr': 4, 'May': 5, 'Jun': 6, 'Jul': 7, 'Aug': 8, 'Sep': 9, 'Oct': 10, 'Nov': 11, 'Dec': 12}
     
-    def __init__(self, doi):
-        self.doi = doi.strip()
-        self.pubmed_url = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&id=' + self.doi + '&retmode=xml&rettype=abstract'
+    def __init__(self, pmid):
+        self.pmid = pmid.strip()
+        self.pubmed_url = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&id=' + self.pmid + '&retmode=xml&rettype=abstract'
         self.html_file = ''
         self.title = ''
         self.journal = ''
@@ -51,7 +51,7 @@ import json
 def search_pubmed(term, retmax=250):
     payload = {'db': 'pubmed', 'retmode': 'json', 'term': term, 'retmax': retmax}
     r = requests.get('http://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi', payload)
-    return [doi for doi in json.loads(r.text)['esearchresult']['idlist']]
+    return [pmid for pmid in json.loads(r.text)['esearchresult']['idlist']]
 
 def search_pubmed_author(author, retmax=250):
     return search_pubmed(author + '[Full Author Name]', retmax=retmax)

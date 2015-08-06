@@ -149,14 +149,14 @@ function buildForceLayout(){
 					.on("mouseover", function(d){
 						d3.select("#tooltip")
 							.select("#name")
-							.text(d.name + '  ' + d.year);
+							.html('<a href="http://www.ncbi.nlm.nih.gov/pubmed/' + d.pmid + '" target="_blank">'+ d.name + '  ' + d.year + '</a>');
 						d3.select("#tooltip")
 							.classed("hidden", false);
 						if(colorbar){
 							colorbar.updateSelectedYear(d.year, d.normYear);
 						}
 					})
-					.on("mousedadown", function(){d3.event.stopPropagation(); });
+					.on("mousedown", function(){d3.event.stopPropagation(); });
 				
 	force.on("tick", function(e){
 		dataset.nodes.forEach( function(d) {

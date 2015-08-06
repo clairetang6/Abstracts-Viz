@@ -22,13 +22,14 @@ def output():
 			titles = data['titles']
 			abstracts = data['abstracts']
 			years_months = data['years_months']
+			pmids = data['pmids']
 
 	except:
 		print('exception')
-		titles, abstracts, years_months = abstract_distance.save_abstracts_and_titles(name, retmax=200)
+		titles, abstracts, years_months, pmids = abstract_distance.save_abstracts_and_titles(name, retmax=200)
 	
 	if len(abstracts) > 0:	
-		app.vars['dataset'] = abstract_distance.get_dataset(titles, abstracts, years_months)
+		app.vars['dataset'] = abstract_distance.get_dataset(titles, abstracts, years_months, pmids)
 		return render_template('viz.html', name=app.vars['name'])
 	else:
 		return 'No abstracts'
