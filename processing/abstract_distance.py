@@ -5,6 +5,7 @@ Created on Sun Jul 26 23:19:33 2015
 @author: Claire Tang
 """
 
+import asyncio
 from . import pubmed_interface
 import nltk
 import json
@@ -15,14 +16,21 @@ from scipy.cluster import hierarchy
 
 stemmer = nltk.stem.porter.PorterStemmer()
 
+loop = asyncio.get_event_loop()
+
+@asyncio.coroutine
 def save_abstracts_and_titles(author, retmax=100):
     pmids = pubmed_interface.search_pubmed_author(author, retmax=retmax)
     titles = []
     abstracts = []
     years_months = []
+    articles = []
     for pmid in pmids:
-        article = pubmed_interface.PubMedObject(pmid)
-        article.download()
+        articles.append(pubmed_interface.PubMedObject(pmid))
+    tasks = [download_article(article) for article in articles]    
+    yield from asyncio.gather(tasks)
+    
+    for article in articles:
         article.fill_data()
         titles.append(article.title)
         abstracts.append(article.abstract)
@@ -33,6 +41,10 @@ def save_abstracts_and_titles(author, retmax=100):
     
     return titles, abstracts, years_months, pmids
 
+@asyncio.coroutine
+def download_article(article):
+    yield from article.download()
+    print("yiedled?")
 
 def tokenize(text):
     tokens = nltk.word_tokenize(text)

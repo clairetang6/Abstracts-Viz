@@ -4,8 +4,10 @@ Created on Sun Jul 26 18:45:35 2015
 
 @author: Claire Tang
 """
-import urllib
+import asyncio
+import aiohttp
 from bs4 import BeautifulSoup
+import numpy as np
 
 class PubMedObject:    
     month_dict = {'Jan': 1, 'Feb': 2, 'Mar': 3, 'Apr': 4, 'May': 5, 'Jun': 6, 'Jul': 7, 'Aug': 8, 'Sep': 9, 'Oct': 10, 'Nov': 11, 'Dec': 12}
@@ -20,13 +22,16 @@ class PubMedObject:
         self.pub_year = ''
         self.pub_month = ''
         
+    @asyncio.coroutine    
     def download(self):
-        response = urllib.request.urlopen(urllib.request.Request(self.pubmed_url))
+        response = yield from aiohttp.get(self.pubmed_url)
+        print("yielded after get")
         try: 
-            self.html_file = response.read()
+            self.html_file = yield from response.text()
         except: 
             print('error reading response from pubmed url');
-        response.close()
+        yield from response.release()
+        print("{0} finished downloading".format(self.pmid))
         
     def fill_data(self):
         soup = BeautifulSoup(self.html_file, 'xml')

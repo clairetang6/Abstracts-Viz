@@ -5,7 +5,6 @@ import json
 
 app = web.Application()
 app.vars = {}
-my_request = {}
 
 @asyncio.coroutine
 def input_form(request):
@@ -18,34 +17,40 @@ app.router.add_route("GET", "/", input_form)
 @asyncio.coroutine
 def output(request):
 	data = yield from request.content.read()
-	print(data)
-	app.vars['name'] = data['scientist_name']
+	app.vars['name'] = data.decode('utf-8').replace('+',' ').partition('scientist_name=')[2]
 	name = app.vars['name']
-	print(name)
-#	
-#	try:
-#		with open('%s.txt'%name.replace(' ', '') , 'r') as f:
-#			data = json.load(f)
-#			titles = data['titles']
-
-#			abstracts = data['abstracts']
-#			years_months = data['years_months']
-#			pmids = data['pmids']
-
-#	except:
-#		print('no data for ' + name + ', getting abstracts now')
-#		titles, abstracts, years_months, pmids = abstract_distance.save_abstracts_and_titles(name, retmax=200)
+	abstracts = []
 	
-#	if len(abstracts) > 0:	
-#		app.vars['dataset'] = abstract_distance.get_dataset(titles, abstracts, years_months, pmids)
-#		return render_template('viz.html', name=app.vars['name'])
-#	else:
-#		return 'No abstracts'
+	try:
+		with open('%s.txt'%name.replace(' ', '') , 'r') as f:
+			data = json.load(f)
+			titles = data['titles']
+
+			abstracts = data['abstracts']
+			years_months = data['years_months']
+			pmids = data['pmids']
+		print(abstracts[0])
+
+	except:
+		print('no data for ' + name + ', getting abstracts now')
+		titles, abstracts, years_months, pmids = yield from abstract_distance.save_abstracts_and_titles(name, 200)
+	
+	if len(abstracts) > 0:	
+		app.vars['dataset'] = abstract_distance.get_dataset(titles, abstracts, years_months, pmids)
+		with open('templates/viz.html', 'r') as f:
+			html = f.read()
+		html = html.replace("{{ name }}", name)
+		return web.Response(body=html.encode('utf-8'))		
+	else:
+		return web.Response(body=b'No abstracts')
 app.router.add_route("POST", "/index", output)	
- 
-#@app.route("/dataset")
-#def dataset():
-#	return json.dumps(app.vars['dataset'])
+
+@asyncio.coroutine 
+def dataset(request):
+	return web.Response(body=json.dumps(app.vars['dataset']).encode('utf-8'), content_type='text/json')
+app.router.add_route("GET", "/dataset", dataset)
+
+app.router.add_static("/static", "static/")
 	 
 if __name__ == "__main__":
 	loop = asyncio.get_event_loop()
