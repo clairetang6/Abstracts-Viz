@@ -107,11 +107,28 @@ function getLinksFromDistanceMatrix(dataset, threshold){
 function buildForceLayout(){
 	force = d3.layout.force()
 					.gravity(0)
-					.charge(dataset.nodes.length < 100 ? -60 : -40)
+					.charge(function(){
+						var charge;
+						if(dataset.nodes.length < 100){
+							charge = -60
+						}else if(dataset.nodes.length < 150){
+							charge = -40
+						}else {
+							charge = -30
+						}
+						if(dataset.edges.length < dataset.nodes.length){
+							charge += 5
+						}
+						return charge
+					}())
 					.nodes(dataset.nodes)
 					.links(dataset.edges)
 					.linkDistance(function(d){
-						return d.distance * 60;	
+						var multiplier = 60;
+						if(dataset.edges.length < dataset.nodes.length){
+							multiplier -= 10;
+						}
+						return d.distance * multiplier;	
 					})
 					.size([1, 0.7])
 					.start()
