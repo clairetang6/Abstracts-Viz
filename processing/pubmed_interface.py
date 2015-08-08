@@ -31,7 +31,7 @@ class PubMedObject:
             response = yield from aiohttp.get(self.pubmed_url)
             status = response.status 
         self.html_file = yield from response.text()
-
+        print('yielded get')
         yield from response.release()
         
     def fill_data(self):
@@ -55,14 +55,19 @@ import json
 
 @asyncio.coroutine
 def search_pubmed(term, retmax=250):
+    print('calling search pubmed')
     payload = {'db': 'pubmed', 'retmode': 'json', 'term': term, 'retmax': retmax}
-    response = yield from aiohttp.get('http://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi', payload)
-    response = yield from response.text()
-    return [pmid for pmid in json.loads(response)['esearchresult']['idlist']]
+    response = yield from aiohttp.get('http://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi', params=payload)
+    response_text = yield from response.text()
+    yield from response.release()
+    return [pmid for pmid in json.loads(response_text)['esearchresult']['idlist']]
+    
 
 @asyncio.coroutine
 def search_pubmed_author(author, retmax=250):
-    yield from search_pubmed(author + '[Full Author Name]', retmax=retmax)
+    print('calling search_pubmed_author')
+    pmids = yield from search_pubmed(author + '[Full Author Name]', retmax=retmax)
+    return pmids
     
     
         

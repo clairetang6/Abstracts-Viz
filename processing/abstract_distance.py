@@ -13,6 +13,13 @@ import string
 import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 from scipy.cluster import hierarchy
+import datetime
+
+from database import create_db
+from sqlalchemy.orm import sessionmaker
+Session = sessionmaker(bind=create_db.engine)
+from database import models
+session = Session()
 
 stemmer = nltk.stem.porter.PorterStemmer()
 
@@ -21,31 +28,55 @@ loop = asyncio.get_event_loop()
 @asyncio.coroutine
 def save_abstracts_and_titles(author, retmax=100):
     pmids = yield from pubmed_interface.search_pubmed_author(author, retmax=retmax)
-    titles = []
-    abstracts = []
-    years_months = []
-    articles = []
-    for pmid in pmids:
-        articles.append(pubmed_interface.PubMedObject(pmid))
-    tasks = [download_article(article) for article in articles]    
+    articles = [get_article(pmid) for pmid in pmids]
+    tasks = [download_article(article) for article in articles if isinstance(article, pubmed_interface.PubMedObject)]
     yield from asyncio.gather(*tasks)
+
+    titles = []
+    abstracts_processed = []
+    years_months = []  
     
     for article in articles:
-        article.fill_data()
         titles.append(article.title)
-        abstracts.append(article.abstract)
         years_months.append((article.pub_year, article.pub_month))
-        
-    with open('%s.txt'%author.replace(' ', '').lower() , 'w') as f:
-        json.dump({'titles': titles, 'abstracts': abstracts, 'retmax': retmax, 'years_months': years_months, 'pmids': pmids}, f)
+        if isinstance(article, pubmed_interface.PubMedObject):
+            abstract_processed = process_abstract(article.abstract)
+            save_article(article, abstract_processed.encode('utf-8'))
+            abstracts_processed.append(abstract_processed)
+        else:
+            abstracts_processed.append(article.abstract_processed.decode('utf-8'))
+   
+    dataset = get_dataset(titles, abstracts_processed, years_months, pmids)
+    save_dataset(author, dataset)
+
     
-    return titles, abstracts, years_months, pmids
+def get_article(pmid):
+    article = session.query(models.Article).filter_by(pmid=pmid).first()
+    if article is None:
+        article = pubmed_interface.PubMedObject(pmid)
+    
+    return article
 
 @asyncio.coroutine
 def download_article(article):
     yield from article.download()
-    print("yiedled?")
+    article.fill_data()
+    print('yielded from download')
+    
+def save_article(article, abstract_processed):
+    session.add(models.Article(pmid=article.pmid, title=article.title, pub_year=article.pub_year, pub_month=article.pub_month, abstract_processed=abstract_processed))
+    session.commit()   
+    
+def save_dataset(name, dataset):
+    date = datetime.date.today()
+    session.add(models.Scientist(name=name, dataset=json.dumps(dataset).encode('utf-8'), date_created=date))
+    session.commit() 
 
+def process_abstract(abstract):
+    #separate words with dashes - and then remove punctuation. 
+    abstract = abstract.lower().translate(str.maketrans("-", " "))
+    return ''.join(c for c in abstract if c not in set(string.punctuation))
+     
 def tokenize(text):
     tokens = nltk.word_tokenize(text)
     stems = [stemmer.stem(word) for word in tokens if not word[0] in ['0','1','2','3','4','5','6','7','8','9']]
@@ -53,10 +84,6 @@ def tokenize(text):
 
 
 def get_dataset(titles, abstracts, years_months, pmids):
-    #separate words with dashes - and then remove punctuation. 
-    abstracts = [ab.lower().translate(str.maketrans("-", " ")) for ab in abstracts]
-    abstracts = [''.join(c for c in ab if c not in set(string.punctuation)) for ab in abstracts]
-    
     tfidf = TfidfVectorizer(tokenizer=tokenize, stop_words="english")
     tfs = tfidf.fit_transform(abstracts).toarray()
     
@@ -70,6 +97,7 @@ def get_dataset(titles, abstracts, years_months, pmids):
         for j in range(i+1, tfs.shape[0]):
             dists.append( 1 - np.dot(tfs[i],tfs[j]))
     dists = np.array(dists)
+    dists[dists<0] = 0
     
     Z = hierarchy.linkage(dists, method='single')
     Z2 = hierarchy.dendrogram(Z)
