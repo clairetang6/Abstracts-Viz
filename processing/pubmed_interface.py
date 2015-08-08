@@ -7,7 +7,6 @@ Created on Sun Jul 26 18:45:35 2015
 import asyncio
 import aiohttp
 from bs4 import BeautifulSoup
-import numpy as np
 
 class PubMedObject:    
     month_dict = {'Jan': 1, 'Feb': 2, 'Mar': 3, 'Apr': 4, 'May': 5, 'Jun': 6, 'Jul': 7, 'Aug': 8, 'Sep': 9, 'Oct': 10, 'Nov': 11, 'Dec': 12}
@@ -52,16 +51,18 @@ class PubMedObject:
             else:
                 self.pub_month = 6
             
-import requests
 import json
 
+@asyncio.coroutine
 def search_pubmed(term, retmax=250):
     payload = {'db': 'pubmed', 'retmode': 'json', 'term': term, 'retmax': retmax}
-    r = requests.get('http://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi', payload)
-    return [pmid for pmid in json.loads(r.text)['esearchresult']['idlist']]
+    response = yield from aiohttp.get('http://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi', payload)
+    response = yield from response.text()
+    return [pmid for pmid in json.loads(response)['esearchresult']['idlist']]
 
+@asyncio.coroutine
 def search_pubmed_author(author, retmax=250):
-    return search_pubmed(author + '[Full Author Name]', retmax=retmax)
+    yield from search_pubmed(author + '[Full Author Name]', retmax=retmax)
     
     
         
