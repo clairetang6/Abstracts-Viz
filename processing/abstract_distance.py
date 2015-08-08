@@ -28,7 +28,7 @@ def save_abstracts_and_titles(author, retmax=100):
     for pmid in pmids:
         articles.append(pubmed_interface.PubMedObject(pmid))
     tasks = [download_article(article) for article in articles]    
-    yield from asyncio.gather(tasks)
+    yield from asyncio.gather(*tasks)
     
     for article in articles:
         article.fill_data()

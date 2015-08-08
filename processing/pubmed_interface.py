@@ -24,14 +24,16 @@ class PubMedObject:
         
     @asyncio.coroutine    
     def download(self):
+        status = 500
         response = yield from aiohttp.get(self.pubmed_url)
-        print("yielded after get")
-        try: 
-            self.html_file = yield from response.text()
-        except: 
-            print('error reading response from pubmed url');
+        status = response.status 
+        while status != 200:    
+            yield from response.release()
+            response = yield from aiohttp.get(self.pubmed_url)
+            status = response.status 
+        self.html_file = yield from response.text()
+
         yield from response.release()
-        print("{0} finished downloading".format(self.pmid))
         
     def fill_data(self):
         soup = BeautifulSoup(self.html_file, 'xml')
