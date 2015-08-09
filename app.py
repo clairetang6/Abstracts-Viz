@@ -8,7 +8,6 @@ Session = sessionmaker(bind=create_db.engine)
 from database import models
 
 app = web.Application()
-abstract_queue = asyncio.Queue()
 
 
 @asyncio.coroutine
@@ -23,16 +22,10 @@ def output(request):
 	data = yield from request.content.read()
 	name = data.decode('utf-8').replace('+',' ').partition('scientist_name=')[2]
 	web_response = yield from asyncio.async(send_response_name(name))
-	yield from abstract_queue.put(name)
+	yield from get_abstracts(name)
 
 	return web_response
 app.router.add_route("POST", "/index", output)	
-
-@asyncio.coroutine
-def consume_abstract_queue():
-	while True:
-		name = yield from abstract_queue.get()
-		yield from get_abstracts(name)
 
 @asyncio.coroutine
 def get_abstracts(name):
@@ -44,7 +37,7 @@ def get_abstracts(name):
 		return
 	else:
 		print('no data for ' + name + ', getting abstracts now')
-		yield from abstract_distance.save_abstracts_and_titles(name, 200)
+		asyncio.Task(abstract_distance.save_abstracts_and_titles(name, 200))
 
 @asyncio.coroutine	
 def send_response_name(name):
@@ -74,7 +67,6 @@ if __name__ == "__main__":
 	f = loop.create_server(handler, '0.0.0.0', 5000)
 	server = loop.run_until_complete(f)
 	print('serving on ', server.sockets[0].getsockname())
-	asyncio.Task(consume_abstract_queue())
 	try: 
 		loop.run_forever()
 	except KeyboardInterrupt:

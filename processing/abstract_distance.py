@@ -61,7 +61,6 @@ def get_article(pmid):
 def download_article(article):
     yield from article.download()
     article.fill_data()
-    print('yielded from download')
     
 def save_article(article, abstract_processed):
     session.add(models.Article(pmid=article.pmid, title=article.title, pub_year=article.pub_year, pub_month=article.pub_month, abstract_processed=abstract_processed))

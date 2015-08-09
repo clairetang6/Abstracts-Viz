@@ -31,7 +31,6 @@ class PubMedObject:
             response = yield from aiohttp.get(self.pubmed_url)
             status = response.status 
         self.html_file = yield from response.text()
-        print('yielded get')
         yield from response.release()
         
     def fill_data(self):
