@@ -1,5 +1,7 @@
 import asyncio
 from aiohttp import web
+import aiohttp_jinja2
+import jinja2
 import json
 from processing import abstract_distance
 from database import create_db
@@ -8,6 +10,7 @@ Session = sessionmaker(bind=create_db.engine)
 from database import models
 
 app = web.Application()
+aiohttp_jinja2.setup(app, loader=jinja2.FileSystemLoader('templates/'))
 
 
 @asyncio.coroutine
@@ -21,10 +24,10 @@ app.router.add_route("GET", "/", input_form)
 def output(request):
 	data = yield from request.content.read()
 	name = data.decode('utf-8').replace('+',' ').partition('scientist_name=')[2]
-	web_response = yield from asyncio.async(send_response_name(name))
+	response = aiohttp_jinja2.render_template('viz.html', request, {'name': name})
 	yield from get_abstracts(name)
 
-	return web_response
+	return response
 app.router.add_route("POST", "/index", output)	
 
 @asyncio.coroutine
@@ -39,14 +42,6 @@ def get_abstracts(name):
 		print('no data for ' + name + ', getting abstracts now')
 		asyncio.Task(abstract_distance.save_abstracts_and_titles(name, 200))
 
-@asyncio.coroutine	
-def send_response_name(name):
-	with open('templates/viz.html', 'r') as f:
-		html = f.read()
-	html = html.replace("{{ name }}", name)
-	return web.Response(body=html.encode('utf-8'))
-	
-
 @asyncio.coroutine 
 def dataset(request):
 	name = request.match_info['name']
@@ -55,7 +50,7 @@ def dataset(request):
 	if scientist:
 		return web.Response(body=scientist.dataset, content_type='text/json')
 	else:
-		return web.HTTPBadRequest()
+		return web.HTTPAccepted()
 		
 app.router.add_route("GET", "/dataset/{name}", dataset)
 
