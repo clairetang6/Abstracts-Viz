@@ -21,6 +21,7 @@ class Article(Base):
 	pub_year = Column(Integer)
 	pub_month = Column(Integer)
 	abstract_processed = Column(LargeBinary)
+	authors = Column(LargeBinary)
 	
 	def __repr__(self):
 		return '<Article {0}: {1}'.format(self.pmid, self.title)

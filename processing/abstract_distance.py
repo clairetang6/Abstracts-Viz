@@ -35,18 +35,22 @@ def save_abstracts_and_titles(author, retmax=100):
     titles = []
     abstracts_processed = []
     years_months = []  
+    authors_all_articles = []
     
     for article in articles:
         titles.append(article.title)
         years_months.append((article.pub_year, article.pub_month))
         if isinstance(article, pubmed_interface.PubMedObject):
             abstract_processed = process_abstract(article.abstract)
-            save_article(article, abstract_processed.encode('utf-8'))
+            authors = json.dumps(article.authors)
+            save_article(article, abstract_processed.encode('utf-8'), authors.encode('utf-8'))
             abstracts_processed.append(abstract_processed)
+            authors_all_articles.append(authors)
         else:
             abstracts_processed.append(article.abstract_processed.decode('utf-8'))
+            authors_all_articles.append(json.loads(article.authors.decode('utf-8')))
    
-    dataset = get_dataset(titles, abstracts_processed, years_months, pmids)
+    dataset = get_dataset(titles, abstracts_processed, years_months, pmids, authors_all_articles)
     save_dataset(author, dataset)
 
     
@@ -62,8 +66,8 @@ def download_article(article):
     yield from article.download()
     article.fill_data()
     
-def save_article(article, abstract_processed):
-    session.add(models.Article(pmid=article.pmid, title=article.title, pub_year=article.pub_year, pub_month=article.pub_month, abstract_processed=abstract_processed))
+def save_article(article, abstract_processed, authors):
+    session.add(models.Article(pmid=article.pmid, title=article.title, pub_year=article.pub_year, pub_month=article.pub_month, abstract_processed=abstract_processed, authors=authors))
     session.commit()   
     
 def save_dataset(name, dataset):
@@ -82,7 +86,7 @@ def tokenize(text):
     return stems
 
 
-def get_dataset(titles, abstracts, years_months, pmids):
+def get_dataset(titles, abstracts, years_months, pmids, authors):
     tfidf = TfidfVectorizer(tokenizer=tokenize, stop_words="english")
     tfs = tfidf.fit_transform(abstracts).toarray()
     
@@ -129,6 +133,7 @@ def get_dataset(titles, abstracts, years_months, pmids):
             'normYear': norm_years[ordering[i]],
             'pmid': pmids[ordering[i]]
         } for i in range(tfs.shape[0])], 
+        'authors': authors,
         'distance_matrix': np.around(ordered_distance_matrix, decimals=3).tolist(),
         'minYear': {'year': min_year, 'normYear': (min_year - min_pub_time)/range_pub_time},
         'maxYear': {'year': max_year + 1, 'normYear': (max_year + 1 - min_pub_time)/range_pub_time}}

@@ -20,6 +20,7 @@ class PubMedObject:
         self.abstract = ''
         self.pub_year = ''
         self.pub_month = ''
+        self.authors = []
         
     @asyncio.coroutine    
     def download(self):
@@ -49,6 +50,16 @@ class PubMedObject:
                 self.pub_month = PubMedObject.month_dict[soup.find('PubDate').Month.string.strip()]
             else:
                 self.pub_month = 6
+        if soup.find('AuthorList'):
+            authors = soup.find('AuthorList').find_all('Author')
+            for author in authors:
+                first_name = author.find('ForeName')
+                last_name = author.find('LastName')
+                first_name = '' if not first_name else first_name.string
+                last_name = '' if not last_name else last_name.string
+                self.authors.append(first_name + ' ' + last_name)
+                
+   
             
 import json
 
