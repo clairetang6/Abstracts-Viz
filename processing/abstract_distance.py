@@ -10,6 +10,8 @@ from . import pubmed_interface
 import nltk
 import json
 import string
+import itertools
+from collections import Counter
 import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 from scipy.cluster import hierarchy
@@ -42,10 +44,10 @@ def save_abstracts_and_titles(author, retmax=100):
         years_months.append((article.pub_year, article.pub_month))
         if isinstance(article, pubmed_interface.PubMedObject):
             abstract_processed = process_abstract(article.abstract)
+            authors_all_articles.append(article.authors)        
             authors = json.dumps(article.authors)
             save_article(article, abstract_processed.encode('utf-8'), authors.encode('utf-8'))
             abstracts_processed.append(abstract_processed)
-            authors_all_articles.append(authors)
         else:
             abstracts_processed.append(article.abstract_processed.decode('utf-8'))
             authors_all_articles.append(json.loads(article.authors.decode('utf-8')))
@@ -127,13 +129,17 @@ def get_dataset(titles, abstracts, years_months, pmids, authors):
     years = years.tolist()
     norm_years = norm_years.tolist()
     
+    authors = list(itertools.chain(*authors))
+    authors_count = Counter(authors)
+    authors_most_common = authors_count.most_common(10)
+    
     dataset = {'nodes': [{
             'name' : titles[ordering[i]], 
             'year': years[ordering[i]],
             'normYear': norm_years[ordering[i]],
             'pmid': pmids[ordering[i]]
         } for i in range(tfs.shape[0])], 
-        'authors': authors,
+        'authors': authors_most_common,
         'distance_matrix': np.around(ordered_distance_matrix, decimals=3).tolist(),
         'minYear': {'year': min_year, 'normYear': (min_year - min_pub_time)/range_pub_time},
         'maxYear': {'year': max_year + 1, 'normYear': (max_year + 1 - min_pub_time)/range_pub_time}}

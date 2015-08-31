@@ -48,11 +48,43 @@ function getDataset() {
 		getLinksFromDistanceMatrix(dataset, dataset.nodes.length < 120 ? 0.8 : 0.70);
 		buildForceLayout();
 		showYearColorBar();	
+		
+		showRelatedAuthors();
 		}
 	});	
 }
 
 getDataset();
+
+
+function showRelatedAuthors(){
+	for (var i = 0; i < dataset.authors.length; i++){
+		var authorName = dataset.authors[i][0];
+		var p = document.createElement('p');
+		var a = document.createElement('a');
+		a.appendChild(document.createTextNode(authorName));
+		a.href = "javascript: post('index', '"+ authorName + "')";
+		p.appendChild(a);
+		document.getElementById("related_authors_list").appendChild(p);		
+	}
+
+}
+
+function post(path, name){
+	var form = document.createElement('form')
+	form.setAttribute('method', 'post')
+	form.setAttribute('action', path)
+	
+	var field = document.createElement("input")
+	field.setAttribute('type', 'hidden')
+	field.setAttribute('name', 'scientist_name')
+	field.setAttribute('value', name)
+	
+	form.appendChild(field);
+	
+	document.body.appendChild(form);
+	form.submit();
+}
 
 function showYearColorBar(){
 	colorbar = new Colorbar();
