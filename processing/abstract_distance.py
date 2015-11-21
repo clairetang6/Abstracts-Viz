@@ -5,46 +5,90 @@ Created on Sun Jul 26 23:19:33 2015
 @author: Claire Tang
 """
 
+import asyncio
 from . import pubmed_interface
 import nltk
 import json
 import string
+import itertools
+from collections import Counter
 import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 from scipy.cluster import hierarchy
+import datetime
+
+from database import create_db
+from sqlalchemy.orm import sessionmaker
+Session = sessionmaker(bind=create_db.engine)
+from database import models
+session = Session()
 
 stemmer = nltk.stem.porter.PorterStemmer()
 
+loop = asyncio.get_event_loop()
+
+@asyncio.coroutine
 def save_abstracts_and_titles(author, retmax=100):
-    pmids = pubmed_interface.search_pubmed_author(author, retmax=retmax)
+    pmids = yield from pubmed_interface.search_pubmed_author(author, retmax=retmax)
+    articles = [get_article(pmid) for pmid in pmids]
+    tasks = [download_article(article) for article in articles if isinstance(article, pubmed_interface.PubMedObject)]
+    yield from asyncio.gather(*tasks)
+
     titles = []
-    abstracts = []
-    years_months = []
-    for pmid in pmids:
-        article = pubmed_interface.PubMedObject(pmid)
-        article.download()
-        article.fill_data()
-        titles.append(article.title)
-        abstracts.append(article.abstract)
-        years_months.append((article.pub_year, article.pub_month))
-        
-    with open('%s.txt'%author.replace(' ', '').lower() , 'w') as f:
-        json.dump({'titles': titles, 'abstracts': abstracts, 'retmax': retmax, 'years_months': years_months, 'pmids': pmids}, f)
+    abstracts_processed = []
+    years_months = []  
+    authors_all_articles = []
     
-    return titles, abstracts, years_months, pmids
+    for article in articles:
+        titles.append(article.title)
+        years_months.append((article.pub_year, article.pub_month))
+        if isinstance(article, pubmed_interface.PubMedObject):
+            abstract_processed = process_abstract(article.abstract)
+            authors_all_articles.append(article.authors)        
+            authors = json.dumps(article.authors)
+            save_article(article, abstract_processed.encode('utf-8'), authors.encode('utf-8'))
+            abstracts_processed.append(abstract_processed)
+        else:
+            abstracts_processed.append(article.abstract_processed.decode('utf-8'))
+            authors_all_articles.append(json.loads(article.authors.decode('utf-8')))
+   
+    dataset = get_dataset(titles, abstracts_processed, years_months, pmids, authors_all_articles)
+    save_dataset(author, dataset)
 
+    
+def get_article(pmid):
+    article = session.query(models.Article).filter_by(pmid=pmid).first()
+    if article is None:
+        article = pubmed_interface.PubMedObject(pmid)
+    
+    return article
 
+@asyncio.coroutine
+def download_article(article):
+    yield from article.download()
+    article.fill_data()
+    
+def save_article(article, abstract_processed, authors):
+    session.add(models.Article(pmid=article.pmid, title=article.title, pub_year=article.pub_year, pub_month=article.pub_month, abstract_processed=abstract_processed, authors=authors))
+    session.commit()   
+    
+def save_dataset(name, dataset):
+    date = datetime.date.today()
+    session.add(models.Scientist(name=name, dataset=json.dumps(dataset).encode('utf-8'), date_created=date))
+    session.commit() 
+
+def process_abstract(abstract):
+    #separate words with dashes - and then remove punctuation. 
+    abstract = abstract.lower().translate(str.maketrans("-", " "))
+    return ''.join(c for c in abstract if c not in set(string.punctuation))
+     
 def tokenize(text):
     tokens = nltk.word_tokenize(text)
     stems = [stemmer.stem(word) for word in tokens if not word[0] in ['0','1','2','3','4','5','6','7','8','9']]
     return stems
 
 
-def get_dataset(titles, abstracts, years_months, pmids):
-    #separate words with dashes - and then remove punctuation. 
-    abstracts = [ab.lower().translate(str.maketrans("-", " ")) for ab in abstracts]
-    abstracts = [''.join(c for c in ab if c not in set(string.punctuation)) for ab in abstracts]
-    
+def get_dataset(titles, abstracts, years_months, pmids, authors):
     tfidf = TfidfVectorizer(tokenizer=tokenize, stop_words="english")
     tfs = tfidf.fit_transform(abstracts).toarray()
     
@@ -58,6 +102,7 @@ def get_dataset(titles, abstracts, years_months, pmids):
         for j in range(i+1, tfs.shape[0]):
             dists.append( 1 - np.dot(tfs[i],tfs[j]))
     dists = np.array(dists)
+    dists[dists<0] = 0
     
     Z = hierarchy.linkage(dists, method='single')
     Z2 = hierarchy.dendrogram(Z)
@@ -84,12 +129,17 @@ def get_dataset(titles, abstracts, years_months, pmids):
     years = years.tolist()
     norm_years = norm_years.tolist()
     
+    authors = list(itertools.chain(*authors))
+    authors_count = Counter(authors)
+    authors_most_common = authors_count.most_common(10)
+    
     dataset = {'nodes': [{
             'name' : titles[ordering[i]], 
             'year': years[ordering[i]],
             'normYear': norm_years[ordering[i]],
             'pmid': pmids[ordering[i]]
         } for i in range(tfs.shape[0])], 
+        'authors': authors_most_common,
         'distance_matrix': np.around(ordered_distance_matrix, decimals=3).tolist(),
         'minYear': {'year': min_year, 'normYear': (min_year - min_pub_time)/range_pub_time},
         'maxYear': {'year': max_year + 1, 'normYear': (max_year + 1 - min_pub_time)/range_pub_time}}

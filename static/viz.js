@@ -38,14 +38,53 @@ var color = d3.scale.linear()
 			.range([d3.rgb(230, 230, 120), d3.rgb(120,205,180), d3.rgb(44,127,184)]);
 var colorbar;
 
-d3.json("/dataset", function(err, json){
-	if (err) return console.warn(err);
-	dataset = json;
-	dataset.edges = [];
-	getLinksFromDistanceMatrix(dataset, dataset.nodes.length < 120 ? 0.8 : 0.70);
-	buildForceLayout();
-	showYearColorBar();
-});
+function getDataset() {
+	d3.json("/dataset/" + name, function(err, json){
+		if (err){
+			setTimeout(getDataset, 1000);	
+		}else{
+		dataset = json;
+		dataset.edges = [];
+		getLinksFromDistanceMatrix(dataset, dataset.nodes.length < 120 ? 0.8 : 0.70);
+		buildForceLayout();
+		showYearColorBar();	
+		
+		showRelatedAuthors();
+		}
+	});	
+}
+
+getDataset();
+
+
+function showRelatedAuthors(){
+	for (var i = 0; i < dataset.authors.length; i++){
+		var authorName = dataset.authors[i][0];
+		var p = document.createElement('p');
+		var a = document.createElement('a');
+		a.appendChild(document.createTextNode(authorName));
+		a.href = "javascript: post('index', '"+ authorName + "')";
+		p.appendChild(a);
+		document.getElementById("related_authors_list").appendChild(p);		
+	}
+
+}
+
+function post(path, name){
+	var form = document.createElement('form')
+	form.setAttribute('method', 'post')
+	form.setAttribute('action', path)
+	
+	var field = document.createElement("input")
+	field.setAttribute('type', 'hidden')
+	field.setAttribute('name', 'scientist_name')
+	field.setAttribute('value', name)
+	
+	form.appendChild(field);
+	
+	document.body.appendChild(form);
+	form.submit();
+}
 
 function showYearColorBar(){
 	colorbar = new Colorbar();
@@ -107,11 +146,28 @@ function getLinksFromDistanceMatrix(dataset, threshold){
 function buildForceLayout(){
 	force = d3.layout.force()
 					.gravity(0)
-					.charge(dataset.nodes.length < 100 ? -60 : -40)
+					.charge(function(){
+						var charge;
+						if(dataset.nodes.length < 100){
+							charge = -60
+						}else if(dataset.nodes.length < 150){
+							charge = -40
+						}else {
+							charge = -30
+						}
+						if(dataset.edges.length < dataset.nodes.length){
+							charge += 5
+						}
+						return charge
+					}())
 					.nodes(dataset.nodes)
 					.links(dataset.edges)
 					.linkDistance(function(d){
-						return d.distance * 60;	
+						var multiplier = 60;
+						if(dataset.edges.length < dataset.nodes.length){
+							multiplier -= 10;
+						}
+						return d.distance * multiplier;	
 					})
 					.size([1, 0.7])
 					.start()
