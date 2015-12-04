@@ -30,8 +30,8 @@ loop = asyncio.get_event_loop()
 @asyncio.coroutine
 def save_abstracts_and_titles(author, retmax=100):
     pmids = yield from pubmed_interface.search_pubmed(author, search_author=True, retmax=retmax)
-    articles = [get_article(pmid) for pmid in pmids]
-    tasks = [download_article(article) for article in articles if isinstance(article, pubmed_interface.PubMedObject)]
+    pm_articles, db_articles = get_article_lists(pmids)
+    tasks = [download_article(article) for article in pm_articles]
     yield from asyncio.gather(*tasks)
 
     titles = []
@@ -39,29 +39,35 @@ def save_abstracts_and_titles(author, retmax=100):
     years_months = []  
     authors_all_articles = []
     
-    for article in articles:
+    for article in pm_articles:
         titles.append(article.title)
         years_months.append((article.pub_year, article.pub_month))
-        if isinstance(article, pubmed_interface.PubMedObject):
-            abstract_processed = process_abstract(article.abstract)
-            authors_all_articles.append(article.authors)        
-            authors = json.dumps(article.authors)
-            save_article(article, abstract_processed.encode('utf-8'), authors.encode('utf-8'))
-            abstracts_processed.append(abstract_processed)
-        else:
-            abstracts_processed.append(article.abstract_processed.decode('utf-8'))
-            authors_all_articles.append(json.loads(article.authors.decode('utf-8')))
+        abstract_processed = process_abstract(article.abstract)
+        authors_all_articles.append(article.authors)        
+        authors = json.dumps(article.authors)
+        save_article(article, abstract_processed.encode('utf-8'), authors.encode('utf-8'))
+        abstracts_processed.append(abstract_processed)
+    
+    for article in db_articles:
+        titles.append(article.title)
+        years_months.append((article.pub_year, article.pub_month))
+        abstracts_processed.append(article.abstract_processed.decode('utf-8'))
+        authors_all_articles.append(json.loads(article.authors.decode('utf-8')))
    
     dataset = get_dataset(titles, abstracts_processed, years_months, pmids, authors_all_articles)
     save_dataset(author, dataset)
 
     
-def get_article(pmid):
-    article = session.query(models.Article).filter_by(pmid=pmid).first()
-    if article is None:
-        article = pubmed_interface.PubMedObject(pmid)
-    
-    return article
+def get_article_lists(pmids):
+    pm_articles = []
+    db_articles = []
+    for pmid in pmids:    
+        article = session.query(models.Article).filter_by(pmid=pmid).first()
+        if article is None:
+            pm_articles.append(pubmed_interface.PubMedObject(pmid))
+        else:
+            db_articles.append(article)
+    return pm_articles, db_articles
 
 @asyncio.coroutine
 def download_article(article):
