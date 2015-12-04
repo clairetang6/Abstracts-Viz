@@ -27,11 +27,10 @@ stemmer = nltk.stem.porter.PorterStemmer()
 
 loop = asyncio.get_event_loop()
 
-@asyncio.coroutine
-def save_abstracts_and_titles(author, retmax=100):
-    pmids = yield from pubmed_interface.search_pubmed(author, search_author=True, retmax=retmax)
+async def save_abstracts_and_titles(author, retmax=100):
+    pmids = await pubmed_interface.search_pubmed(author, search_author=True, retmax=retmax)
     pm_articles, db_articles = get_article_lists(pmids)
-    yield from pubmed_interface.download_articles(pm_articles)
+    await pubmed_interface.download_articles(pm_articles)
     
     for article in pm_articles:
         article.fill_data()

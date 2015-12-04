@@ -22,21 +22,20 @@ class PubMedObject:
         self.pub_month = ''
         self.authors = []
         
-    @asyncio.coroutine    
-    def download(self, session=None):
+    async def download(self, session=None):
         if session is not None:
             get = session.get
         else:
             get = aiohttp.get
         status = 500
-        response = yield from get(self.pubmed_url)
+        response = await get(self.pubmed_url)
         status = response.status 
         while status != 200:    
-            yield from response.release()
-            response = yield from get(self.pubmed_url)
+            await response.release()
+            response = await get(self.pubmed_url)
             status = response.status
-        self.html_file = yield from response.text()
-        yield from response.release()
+        self.html_file = await response.text()
+        await response.release()
         
     def fill_data(self):
         soup = BeautifulSoup(self.html_file, 'xml')
@@ -63,29 +62,26 @@ class PubMedObject:
                 last_name = '' if not last_name else last_name.string
                 self.authors.append(first_name + ' ' + last_name)
                 
-@asyncio.coroutine
-def download_articles(articles):
+async def download_articles(articles):
     with aiohttp.ClientSession() as client:
         tasks = [download_article(article, client) for article in articles]
-        yield from asyncio.gather(*tasks)
+        await asyncio.gather(*tasks)
 
-@asyncio.coroutine
-def download_article(article, session=None):
-    yield from article.download(session)
+async def download_article(article, session=None):
+    await article.download(session)
             
 import json
 
-@asyncio.coroutine
-def search_pubmed(term, search_author=False, retmax=250):
+async def search_pubmed(term, search_author=False, retmax=250):
     if search_author:
         print('search pubmed author: ' + term)
         term = term + '[Full Author Name]'
     else:
         print('search pubmed term: ' + term)
     payload = {'db': 'pubmed', 'retmode': 'json', 'term': term, 'retmax': retmax}
-    response = yield from aiohttp.get('http://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi', params=payload)
-    response_text = yield from response.text()
-    yield from response.release()
+    response = await aiohttp.get('http://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi', params=payload)
+    response_text = await response.text()
+    await response.release()
     return [pmid for pmid in json.loads(response_text)['esearchresult']['idlist']]
     
         
