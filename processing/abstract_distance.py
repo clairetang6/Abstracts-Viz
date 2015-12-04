@@ -29,7 +29,7 @@ loop = asyncio.get_event_loop()
 
 @asyncio.coroutine
 def save_abstracts_and_titles(author, retmax=100):
-    pmids = yield from pubmed_interface.search_pubmed_author(author, retmax=retmax)
+    pmids = yield from pubmed_interface.search_pubmed(author, search_author=True, retmax=retmax)
     articles = [get_article(pmid) for pmid in pmids]
     tasks = [download_article(article) for article in articles if isinstance(article, pubmed_interface.PubMedObject)]
     yield from asyncio.gather(*tasks)
