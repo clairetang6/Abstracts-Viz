@@ -23,13 +23,17 @@ class PubMedObject:
         self.authors = []
         
     @asyncio.coroutine    
-    def download(self):
+    def download(self, session=None):
+        if session is not None:
+            get = session.get
+        else:
+            get = aiohttp.get
         status = 500
-        response = yield from aiohttp.get(self.pubmed_url)
+        response = yield from get(self.pubmed_url)
         status = response.status 
         while status != 200:    
             yield from response.release()
-            response = yield from aiohttp.get(self.pubmed_url)
+            response = yield from get(self.pubmed_url)
             status = response.status
         self.html_file = yield from response.text()
         yield from response.release()
@@ -59,7 +63,15 @@ class PubMedObject:
                 last_name = '' if not last_name else last_name.string
                 self.authors.append(first_name + ' ' + last_name)
                 
-   
+@asyncio.coroutine
+def download_articles(articles):
+    with aiohttp.ClientSession() as client:
+        tasks = [download_article(article, client) for article in articles]
+        yield from asyncio.gather(*tasks)
+
+@asyncio.coroutine
+def download_article(article, session=None):
+    yield from article.download(session)
             
 import json
 

@@ -31,8 +31,10 @@ loop = asyncio.get_event_loop()
 def save_abstracts_and_titles(author, retmax=100):
     pmids = yield from pubmed_interface.search_pubmed(author, search_author=True, retmax=retmax)
     pm_articles, db_articles = get_article_lists(pmids)
-    tasks = [download_article(article) for article in pm_articles]
-    yield from asyncio.gather(*tasks)
+    yield from pubmed_interface.download_articles(pm_articles)
+    
+    for article in pm_articles:
+        article.fill_data()
 
     titles = []
     abstracts_processed = []
@@ -57,7 +59,6 @@ def save_abstracts_and_titles(author, retmax=100):
     dataset = get_dataset(titles, abstracts_processed, years_months, pmids, authors_all_articles)
     save_dataset(author, dataset)
 
-    
 def get_article_lists(pmids):
     pm_articles = []
     db_articles = []
@@ -68,11 +69,6 @@ def get_article_lists(pmids):
         else:
             db_articles.append(article)
     return pm_articles, db_articles
-
-@asyncio.coroutine
-def download_article(article):
-    yield from article.download()
-    article.fill_data()
     
 def save_article(article, abstract_processed, authors):
     session.add(models.Article(pmid=article.pmid, title=article.title, pub_year=article.pub_year, pub_month=article.pub_month, abstract_processed=abstract_processed, authors=authors))
