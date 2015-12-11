@@ -36,7 +36,7 @@ async def get_abstracts(name):
 		return
 	else:
 		print('no data for ' + name + ', getting abstracts now')
-		asyncio.Task(abstract_distance.save_abstracts_and_titles(name, 200))
+		asyncio.ensure_future(abstract_distance.save_abstracts_and_titles(name, 200))
 
 async def dataset(request):
 	name = request.match_info['name']
