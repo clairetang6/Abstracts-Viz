@@ -23,7 +23,7 @@ Session = sessionmaker(bind=create_db.engine)
 from database import models
 session = Session()
 
-stemmer = nltk.stem.porter.PorterStemmer()
+lemmatizer = nltk.stem.wordnet.WordNetLemmatizer()
 
 loop = asyncio.get_event_loop()
 
@@ -85,8 +85,8 @@ def process_abstract(abstract):
      
 def tokenize(text):
     tokens = nltk.word_tokenize(text)
-    stems = [stemmer.stem(word) for word in tokens if not word[0] in ['0','1','2','3','4','5','6','7','8','9']]
-    return stems
+    lemmas = [lemmatizer.lemmatize(word) for word in tokens if not word[0] in set(string.digits)]
+    return lemmas
 
 
 def get_dataset(titles, abstracts, years_months, pmids, authors):
