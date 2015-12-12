@@ -3,15 +3,15 @@ from sqlalchemy import Column, Integer, String, LargeBinary, Date
 
 Base = declarative_base()
 
-class Scientist(Base):
-	__tablename__ = 'scientists'
+class SearchTerm(Base):
+	__tablename__ = 'search_terms'
 	
-	name = Column(String, primary_key=True)
+	search_term = Column(String, primary_key=True)
 	dataset = Column(LargeBinary)
 	date_created = Column(Date)
 	
 	def __repr__(self):
-		return "<Scientist: {0}, {1}>".format(self.name, self.date_created)
+		return "<Search Term: {0}, {1}>".format(self.search_term, self.date_created)
 		
 class Article(Base):
 	__tablename__ ='articles'

@@ -2,7 +2,7 @@ import asyncio
 from aiohttp import web
 import aiohttp_jinja2
 import jinja2
-from processing import abstract_distance
+from processing import backend
 from database import create_db
 from sqlalchemy.orm import sessionmaker
 Session = sessionmaker(bind=create_db.engine)
@@ -27,23 +27,24 @@ async def output(request):
 	return response
 app.router.add_route("POST", "/index", output)	
 
-async def get_abstracts(name):
+async def get_abstracts(search_term):
 	print('getting abstracts')
 	session = Session()
-	scientist = session.query(models.Scientist).filter_by(name=name).first()
-	session.close()
-	if scientist:
+	search_term = backend.get_search_term_key(search_term)
+	searched_term = session.query(models.SearchTerm).filter_by(search_term=search_term).first()
+	if searched_term:
 		return
 	else:
-		print('no data for ' + name + ', getting abstracts now')
-		asyncio.ensure_future(abstract_distance.save_abstracts_and_titles(name, 200))
+		print('no data for ' + search_term + ', getting abstracts now')
+		asyncio.ensure_future(backend.search_pubmed_save_articles_compute_distance_dataset(search_term, 100))
 
 async def dataset(request):
-	name = request.match_info['name']
+	search_term = request.match_info['name']
 	session = Session()
-	scientist = session.query(models.Scientist).filter_by(name=name).first()
-	if scientist:
-		return web.Response(body=scientist.dataset, content_type='text/json')
+	search_term = backend.get_search_term_key(search_term)
+	searched_term = session.query(models.SearchTerm).filter_by(search_term=search_term).first()	
+	if searched_term:
+		return web.Response(body=searched_term.dataset, content_type='text/json')
 	else:
 		return web.HTTPAccepted()
 		
