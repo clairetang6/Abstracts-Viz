@@ -61,9 +61,12 @@ class PubMedObject:
                 first_name = '' if not first_name else first_name.string
                 last_name = '' if not last_name else last_name.string
                 self.authors.append(first_name + ' ' + last_name)
-                
+
+loop = asyncio.get_event_loop()
+
 async def download_articles(articles):
-    with aiohttp.ClientSession() as client:
+    connector = aiohttp.TCPConnector(loop=loop, limit=25)
+    with aiohttp.ClientSession(connector=connector) as client:
         tasks = [download_article(article, client) for article in articles]
         await asyncio.gather(*tasks)
 
@@ -83,5 +86,3 @@ async def search_pubmed(term, search_author=False, retmax=250):
     response_text = await response.text()
     await response.release()
     return [pmid for pmid in json.loads(response_text)['esearchresult']['idlist']]
-    
-        
