@@ -2,16 +2,63 @@
 <html>
 	<head>
 			<link rel="shortcut icon" href="static/favicon.ico">
+			<link rel="stylesheet" href="http://yui.yahooapis.com/pure/0.6.0/pure-min.css">
+			<link rel="stylesheet" href="http://yui.yahooapis.com/pure/0.6.0/grids-responsive-min.css">
+			<meta name="viewport" content="width=device-width, initial-scale=1">
+			<style>
+				#headerBlocks {
+					display: table;
+					width: 100%;
+				}
+				.headerBlock {
+					display: table-cell;
+					height: 12px;
+					padding: 0;
+				}
+				#headerBlock1 {
+					background-color: rgb(230, 230, 120);
+				}
+				#headerBlock2 {
+					background-color: rgb(120, 205, 180);
+				}
+				#headerBlock3 {
+					background-color: rgb(44, 127, 184);
+				}
+				#pubviz {
+					text-align: center;
+					font-size: 4em;
+					font-family: sans-serif;
+					color: #444444;
+					padding: 0.2em 0 1em 0;
+				}
+				footer {
+					background-color: #eee;
+				}
+			</style>
 	</head>
 	<body>
-		<div>
-			<form id="scientist_input" method="post" action="index">
-				<p>
-					<input type="text" name="scientist_name"></input>
-				</p>
-				<p>
-					<input type="submit" value="submit">
-				</p>
+		<header>
+			<div id="headerBlocks">
+				<div id="headerBlock1" class="headerBlock"></div>
+				<div id="headerBlock2" class="headerBlock"></div>
+				<div id="headerBlock3" class="headerBlock"></div>
+			</div>
+			<div id="pubviz">Pubviz</div>
+		</header>
+		<div class="pure-g" style="text-align: center">
+			<form class="pure-form pure-u-1" id="scientist_input" method="post" action="index">
+				<fieldset>
+					<div class="pure-u-1 pure-u-md-2-3 pure-u-lg-1-2">
+						<div style="padding: 10px">
+							<div class="pure-u-1 pure-u-md-3-4">
+								<input class="pure-input-1" type="text" name="scientist_name" placeholder="Search for author or term"></input>
+							</div>
+							<div class="pure-u-1 pure-u-md-1-5">
+								<button class="pure-input-1 pure-button pure-button-primary" type="submit" value="submit">Visualize</button>
+							</div>
+						</div>
+					</div>
+				</fieldset>
 			</form>
 		</div>
 	</body>

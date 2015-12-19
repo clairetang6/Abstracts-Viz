@@ -1,17 +1,14 @@
 <!DOCTYPE html>
-<html lang='en'>
+<html>
 	<head>
 		<meta charset='utf-8'>
 		<title>Visualizing Research Papers</title>
 		<link rel="shortcut icon" href="static/favicon.ico">
+		<link rel="stylesheet" href="http://yui.yahooapis.com/pure/0.6.0/pure-min.css">
+		<link rel="stylesheet" href="http://yui.yahooapis.com/pure/0.6.0/grids-responsive-min.css">
+		<meta name="viewport" content="width=device-width, initial-scale=1">	
 		<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.6/d3.min.js"></script>
 		<style>
-			#related_authors {
-				position: fixed;
-				right: 2em;
-				top: 2em;	
-			}
-			
 			#tooltip {
 				position: fixed;
 				width: 1000px;
@@ -23,18 +20,22 @@
 				font-family: sans-serif;
 			}
 			
-			#tooltip a:link {
+			a:link {
 				color: #000;
 				text-decoration: none;
 				padding-bottom: 1px;
 				border-bottom: 1px dotted;
 			}
+			
+			header a:link{
+				border: 0;
+			}
 
-			#tooltip a:visited {
+			a:visited {
 				color: #000;
 			}
 
-			#tooltip a:hover {
+			a:hover {
 			    color: #888;
 			}
 				
@@ -44,17 +45,15 @@
 				border: 2px dotted;
 			}
 			
-			#tooltip.hidden {
+			.hidden {
 				display: none;
 			}
 			
 			#canvas-container {
 				width: 95%;
-				height: 90vh;
 				margin: 0 auto;
 				display: flex;
 				justify-content: center;
-				align-items: center;
 			}
 			
 			#scientist {
@@ -64,21 +63,63 @@
 				font-size: large;
 			}
 			
+			#header {
+				height: 3em;
+				background-color: #dddddd;
+				color: #333333;
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+			}
+			
+			#pubviz{
+				font-size: 2em;
+				padding-left: 0.25em;
+			}
+			
+			#search{
+				padding-right: 0.25em;
+			}
 		</style>
 	</head>
 	<body>
-		<div id="scientist">
-			{{ name }}
-		</div>
-		<div id="canvas-container">
-			<script type="text/javascript">
-				name = "{{ name }}";
-			</script>
-			<script type="text/javascript" src="static/viz.js"></script>
-		</div>
-		<div id="related_authors">
-			<ul id="related_authors_list">
-			</ul>
+		<header>
+			<div id="header">
+				<div id="pubviz"><a href="/">Pubviz</a></div>
+				<div id="search">
+					<form class="pure-form" method="post" action="index">
+						<input type="text" name="scientist_name" placeholder="Search again..">
+						<button type="submit" class="pure-button pure-button-primary">Visualize</button>
+					</form>
+				</div>
+			</div>
+		</header>
+		<div class="pure-g">
+			<div class="pure-u-1" id="scientist">
+				{{ name }}
+			</div>
+			<div class="pure-u-1 pure-u-xl-1-6"></div>
+			<div class="pure-u-1 pure-u-md-4-5 pure-u-lg-3-4 pure-u-xl-2-3">
+				<div id="canvas-container">
+					<script type="text/javascript">
+						name = "{{ name }}";
+					</script>
+					<script type="text/javascript" src="static/viz.js"></script>
+				</div>
+			</div>
+			
+			<div class="pure-u-1 pure-u-md-1-5 pure-u-lg-1-4 pure-u-xl-1-6">
+				<table id="related_authors" class="pure-table hidden">
+					<thead>
+						<tr>
+							<th>Related Authors</th>
+						</tr>
+					</thead>
+				
+					<tbody id="related_authors_list">
+					</tbody>
+				</table>
+			</div>
 		</div>
 		<div id="tooltip" class="hidden">
 			<p><span id="name"></span></p>

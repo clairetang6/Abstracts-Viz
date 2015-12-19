@@ -58,16 +58,18 @@ getDataset();
 
 
 function showRelatedAuthors(){
+	d3.select("#related_authors").classed("hidden", false);	
 	for (var i = 0; i < dataset.authors.length; i++){
 		var authorName = dataset.authors[i][0];
-		var p = document.createElement('p');
+		var tr = document.createElement('tr');
+		var td = document.createElement('td');
 		var a = document.createElement('a');
 		a.appendChild(document.createTextNode(authorName));
 		a.href = "javascript: post('index', '"+ authorName + "')";
-		p.appendChild(a);
-		document.getElementById("related_authors_list").appendChild(p);		
+		td.appendChild(a);
+		tr.appendChild(td);
+		document.getElementById("related_authors_list").appendChild(tr);		
 	}
-
 }
 
 function post(path, name){
