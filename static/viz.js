@@ -148,7 +148,7 @@ function buildForceLayout(){
 					.gravity(0)
 					.charge(function(){
 						var charge;
-						if(dataset.nodes.length < 100){
+						if(dataset.nodes.length < 80){
 							charge = -60
 						}else if(dataset.nodes.length < 150){
 							charge = -40
@@ -201,7 +201,6 @@ function buildForceLayout(){
 							return color(d.normYear);
 						}
 					})
-					.call(force.drag)
 					.on("mouseover", function(d){
 						d3.select("#tooltip")
 							.select("#name")
@@ -214,25 +213,27 @@ function buildForceLayout(){
 					})
 					.on("mousedown", function(){d3.event.stopPropagation(); });
 				
-	force.on("tick", function(e){
-		dataset.nodes.forEach( function(d) {
-			if(d.normYear != - 1){
-				d.x += (d.normYear - 0.5) * 10 * e.alpha;	
-			}
-			
-			d.y += (height/2 - d.y) * e.alpha * force.gravityY;
-			d.x += (width/2 - d.x) * e.alpha * force.gravityX;
+	force.on("tick", forceLayoutTick);
+}
 
-		});
+var forceLayoutTick = function(e){
+	console.log('ticking')
+	dataset.nodes.forEach( function(d){
+		if(d.normYear != -1){
+			d.x += (d.normYear - 0.5) * 10 * e.alpha;
+		}
 		
-		edges.attr("x1", function(d) { return d.source.x})
+		d.y += (height/2 - d.y) * e.alpha * force.gravityY;
+		d.x += (width/2 - d.x) * e.alpha * force.gravityX;
+	});
+	
+	edges.attr("x1", function(d) {return d.source.x})
 			.attr("x2", function(d) { return d.target.x})
 			.attr("y1", function(d) { return d.source.y})
 			.attr("y2", function(d) { return d.target.y});
 		
 		nodes.attr("cx", function(d) { return d.x; })
-	     	.attr("cy", function(d) { return d.y; });
-	});	
+			.attr("cy", function(d) { return d.y; });	
 }
 
 var Colorbar = function(){
