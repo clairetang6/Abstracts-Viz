@@ -28,12 +28,21 @@ class PubMedObject:
         else:
             get = aiohttp.get
         status = 500
-        response = await get(self.pubmed_url)
-        status = response.status 
-        while status != 200:    
-            await response.release()
+        response = None
+        try:
             response = await get(self.pubmed_url)
-            status = response.status
+            status = response.status             
+        except Exception as e:
+            print(type(e).__name__)
+        while status != 200:    
+            if response:
+                await response.release()
+            try:
+                response = await get(self.pubmed_url)
+            except Exception as e:
+                print(type(e).__name__)
+            if response:
+                status = response.status
         self.html_file = await response.text()
         await response.release()
         
@@ -64,11 +73,14 @@ class PubMedObject:
 
 loop = asyncio.get_event_loop()
 
+sem = asyncio.Semaphore(2)
+
 async def download_articles(articles):
-    connector = aiohttp.TCPConnector(loop=loop, limit=25)
-    with aiohttp.ClientSession(connector=connector) as client:
-        tasks = [download_article(article, client) for article in articles]
-        await asyncio.gather(*tasks)
+    with (await sem):
+        connector = aiohttp.TCPConnector(loop=loop, limit=10)
+        with aiohttp.ClientSession(connector=connector) as client:
+            tasks = [download_article(article, client) for article in articles]
+            await asyncio.gather(*tasks)
 
 async def download_article(article, session=None):
     await article.download(session)
