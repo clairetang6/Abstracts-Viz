@@ -17,6 +17,7 @@ from . import pubmed_interface
 from . import abstract_text
 
 from database import create_db
+import sqlalchemy
 from sqlalchemy.orm import sessionmaker
 Session = sessionmaker(bind=create_db.engine)
 from database import models
@@ -60,7 +61,7 @@ async def search_pubmed_save_articles_compute_distance_dataset(search_term, retm
 		authors_all_articles.append(json.loads(article.authors.decode('utf-8')))
 		
 	dataset = compute_dataset(titles, abstracts_processed, years_months, pmids, authors_all_articles)
-	save_dataset(search_term, dataset)	
+	save_dataset(search_term, dataset)
 		
 def get_article_lists(pmids):
 	pm_articles = []
@@ -74,17 +75,29 @@ def get_article_lists(pmids):
 	return pm_articles, db_articles
 
 def save_article(article, abstract_processed, authors):
-	session.add(models.Article(pmid=article.pmid, title=article.title, pub_year=article.pub_year, pub_month=article.pub_month, abstract_processed=abstract_processed, authors=authors))
-	session.commit()
-	
+	try:
+		session.add(models.Article(pmid=article.pmid, title=article.title, pub_year=article.pub_year, pub_month=article.pub_month, abstract_processed=abstract_processed, authors=authors))
+		session.commit()
+	except sqlalchemy.exc.IntegrityError:
+		session.rollback()
+	except sqlalchemy.exc.SQLAlchemyError as e:
+		print('caught sqlalchemy error')
+		print(type(e).__name__)
+
 def get_search_term_key(search_term):
 	return string.capwords(abstract_text.remove_punctuation(search_term))
 	
 def save_dataset(search_term, dataset):
 	date = datetime.date.today()
 	search_term = get_search_term_key(search_term)
-	session.add(models.SearchTerm(search_term=search_term, dataset=json.dumps(dataset).encode('utf-8'), date_created=date))
-	session.commit() 
+	try:
+		session.add(models.SearchTerm(search_term=search_term, dataset=json.dumps(dataset).encode('utf-8'), date_created=date))
+		session.commit() 
+	except sqlalchemy.exc.IntegrityError:
+		session.rollback()
+	except sqlalchemy.exc.SQLAlchemyError as e:
+		print('caught sqlalchemy error')
+		print(type(e).__name__)
 
 def compute_dataset(titles, abstracts, years_months, pmids, authors):
 	distance_matrix = abstract_text.get_abstract_distance_matrix(abstracts)
