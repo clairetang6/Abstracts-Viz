@@ -23,6 +23,8 @@ Session = sessionmaker(bind=create_db.engine)
 from database import models
 session = Session()
 
+loop = asyncio.get_event_loop()
+
 def check_if_author(search_term):
 	search_term = name_key(search_term)
 	tagged_terms = nltk.pos_tag(nltk.word_tokenize(search_term))
@@ -59,8 +61,8 @@ async def search_pubmed_save_articles_compute_distance_dataset(search_term, retm
 		years_months.append((article.pub_year, article.pub_month))
 		abstracts_processed.append(article.abstract_processed.decode('utf-8'))
 		authors_all_articles.append(json.loads(article.authors.decode('utf-8')))
-		
-	dataset = compute_dataset(titles, abstracts_processed, years_months, pmids, authors_all_articles)
+	
+	dataset = await loop.run_in_executor(None, compute_dataset, titles, abstracts_processed, years_months, pmids, authors_all_articles)
 	save_dataset(search_term, dataset)
 		
 def get_article_lists(pmids):
