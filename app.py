@@ -31,7 +31,12 @@ async def get_abstracts(search_term):
 	print('getting abstracts')
 	session = Session()
 	search_term = backend.get_search_term_key(search_term)
-	searched_term = session.query(models.SearchTerm).filter_by(search_term=search_term).first()
+	try:
+		searched_term = session.query(models.SearchTerm).filter_by(search_term=search_term).first()
+	except Exception as e:
+		print(type(e).__name__)
+	finally:
+		session.close()
 	if searched_term:
 		return
 	else:
@@ -42,7 +47,12 @@ async def dataset(request):
 	search_term = request.match_info['name']
 	session = Session()
 	search_term = backend.get_search_term_key(search_term)
-	searched_term = session.query(models.SearchTerm).filter_by(search_term=search_term).first()	
+	try:
+		searched_term = session.query(models.SearchTerm).filter_by(search_term=search_term).first()	
+	except Exception as e:
+		print(type(e).__name__)
+	finally:
+		session.close()
 	if searched_term:
 		return web.Response(body=searched_term.dataset, content_type='text/json')
 	else:
