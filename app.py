@@ -3,6 +3,7 @@ from aiohttp import web
 import aiohttp_jinja2
 import jinja2
 from processing import backend
+from processing import database_interface
 from database import create_db
 from sqlalchemy.orm import sessionmaker
 Session = sessionmaker(bind=create_db.engine)
@@ -15,8 +16,8 @@ aiohttp_jinja2.setup(app, loader=jinja2.FileSystemLoader('templates/'))
 async def input_form(request):
 	with open('templates/form.html', 'r') as f:
 		html = f.read()
-	return web.Response(body=html.encode('utf-8'))
-app.router.add_route("GET", "/", input_form)
+	return web.Response(body=html.encode('utf-8'), content_type="text/html")
+app.add_routes([web.get("/", input_form)])
 
 async def output(request):
 	data = await request.content.read()
@@ -25,12 +26,12 @@ async def output(request):
 	await get_abstracts(name)
 
 	return response
-app.router.add_route("POST", "/index", output)	
+app.add_routes([web.post("/index", output)])	
 
 async def get_abstracts(search_term):
 	print('getting abstracts')
 	session = Session()
-	search_term = backend.get_search_term_key(search_term)
+	search_term = database_interface.get_search_term_key(search_term)
 	try:
 		searched_term = session.query(models.SearchTerm).filter_by(search_term=search_term).first()
 	except Exception as e:
@@ -46,7 +47,7 @@ async def get_abstracts(search_term):
 async def dataset(request):
 	search_term = request.match_info['name']
 	session = Session()
-	search_term = backend.get_search_term_key(search_term)
+	search_term = database_interface.get_search_term_key(search_term)
 	try:
 		searched_term = session.query(models.SearchTerm).filter_by(search_term=search_term).first()	
 	except Exception as e:
@@ -58,23 +59,9 @@ async def dataset(request):
 	else:
 		return web.HTTPAccepted()
 		
-app.router.add_route("GET", "/dataset/{name}", dataset)
+app.add_routes([web.get("/dataset/{name}", dataset)])
 
-app.router.add_static("/static", "static/")
+app.add_routes([web.static("/static", "static/")])
 	 
 if __name__ == "__main__":
-	loop = asyncio.get_event_loop()
-	handler = app.make_handler()
-	f = loop.create_server(handler, '0.0.0.0', 5000)
-	server = loop.run_until_complete(f)
-	print('serving on ', server.sockets[0].getsockname())
-	try: 
-		loop.run_forever()
-	except KeyboardInterrupt:
-		pass
-	finally:
-		loop.run_until_complete(handler.finish_connections(1.0))
-		server.close()
-		loop.run_until_complete(server.wait_closed())
-		loop.run_until_complete(app.finish())
-	loop.close()
+	web.run_app(app)
