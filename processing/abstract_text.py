@@ -14,6 +14,8 @@ from scipy.cluster import hierarchy
 lemmatizer = nltk.stem.wordnet.WordNetLemmatizer()
 
 def preprocess_abstract(abstract):
+    if abstract is None:
+        return ""
     #separate words with dashes - and then remove punctuation. 
     abstract = abstract.lower().translate(str.maketrans("-", " "))
     text = remove_punctuation(abstract)
@@ -28,18 +30,10 @@ def remove_punctuation(s):
 def preprocess_abstracts(abstracts):
     return [preprocess_abstract(ab) for ab in abstracts]
 
-def get_tfidf_vectorizer(stop_words="english"):
-    tfidf = TfidfVectorizer(stop_words=stop_words)
-    return tfidf
-
-def get_tfs_from_abstracts(abstracts, tfidf=None):
-    if tfidf is None:
-        tfidf = get_tfidf_vectorizer()
-    tfs = tfidf.fit_transform(abstracts).toarray()
-    return tfs
-
 def get_abstract_distance_matrix(abstracts, tfidf=None):
-    tfs = get_tfs_from_abstracts(abstracts, tfidf)
+    if tfidf is None:
+        tfidf = TfidfVectorizer(stop_words="english")
+    tfs = tfidf.fit_transform(abstracts).toarray()
     distance_matrix = np.zeros((tfs.shape[0], tfs.shape[0]))
     for i in range(tfs.shape[0]):
         for j in range(tfs.shape[0]):
