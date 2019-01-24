@@ -7,13 +7,17 @@ Created on Sun Jul 26 18:45:35 2015
 import asyncio
 import aiohttp
 from bs4 import BeautifulSoup
+import time 
+import os
+
+api_key = os.environ['PUBMED_API_KEY']
 
 class PubMedObject:    
     month_dict = {'Jan': 1, 'Feb': 2, 'Mar': 3, 'Apr': 4, 'May': 5, 'Jun': 6, 'Jul': 7, 'Aug': 8, 'Sep': 9, 'Oct': 10, 'Nov': 11, 'Dec': 12}
     
     def __init__(self, pmid):
         self.pmid = pmid.strip()
-        self.pubmed_url = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&id=' + self.pmid + '&retmode=xml&rettype=abstract'
+        self.pubmed_url = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&id=' + self.pmid + '&api_key=' + str(api_key) + '&retmode=xml&rettype=abstract'
         self.html_file = ''
         self.title = ''
         self.journal = ''
@@ -21,31 +25,26 @@ class PubMedObject:
         self.pub_year = ''
         self.pub_month = ''
         self.authors = []
-        
+    
     async def download(self, session=None):
-        if session is not None:
-            get = session.get
+        if session is None:
+            async with aiohttp.ClientSession() as session:
+                session = RateLimiter(session)
+                await self.download_with_session(session)
         else:
-            get = aiohttp.get
+            await self.download_with_session(session)
+
+    async def download_with_session(self, session):
         status = 500
-        response = None
-        try:
-            response = await get(self.pubmed_url)
-            status = response.status             
-        except Exception as e:
-            print(type(e).__name__)
-        while status != 200:    
-            if response:
-                await response.release()
+        while status != 200:
             try:
-                response = await get(self.pubmed_url)
+                async with await session.get(self.pubmed_url) as response:
+                    status = response.status
+                    if status == 200:
+                        self.html_file = await response.text()
             except Exception as e:
                 print(type(e).__name__)
-            if response:
-                status = response.status
-        self.html_file = await response.text()
-        await response.release()
-        
+
     def fill_data(self):
         soup = BeautifulSoup(self.html_file, 'xml')
         
@@ -59,7 +58,10 @@ class PubMedObject:
             if soup.find('PubDate').Year:
                 self.pub_year = soup.find('PubDate').Year.string
             if soup.find('PubDate').Month:
-                self.pub_month = PubMedObject.month_dict[soup.find('PubDate').Month.string.strip()]
+                if soup.find('PubDate').Month.string.strip() in PubMedObject.month_dict.keys():
+                    self.pub_month = PubMedObject.month_dict[soup.find('PubDate').Month.string.strip()]
+                else:
+                    self.pub_month = 6
             else:
                 self.pub_month = 6
         if soup.find('AuthorList'):
@@ -71,21 +73,53 @@ class PubMedObject:
                 last_name = '' if not last_name else last_name.string
                 self.authors.append(first_name + ' ' + last_name)
 
-loop = asyncio.get_event_loop()
-
 sem = asyncio.Semaphore(2)
 
 async def download_articles(articles):
     with (await sem):
-        connector = aiohttp.TCPConnector(loop=loop, limit=10)
-        with aiohttp.ClientSession(connector=connector) as client:
-            tasks = [download_article(article, client) for article in articles]
-            await asyncio.gather(*tasks)
+        session = get_client_session()
+        tasks = [download_article(article, session) for article in articles]
+        await asyncio.gather(*tasks)
+    await session.close()
 
 async def download_article(article, session=None):
     await article.download(session)
-            
-import json
+                
+def get_client_session():
+    """ returned session must be closed after use
+    """
+    connector = aiohttp.TCPConnector(limit=10)
+    return RateLimiter(aiohttp.ClientSession(connector=connector))
+
+class RateLimiter:
+    RATE = 5
+    MAX_TOKENS = 5
+
+    def __init__(self, session):
+        self.session = session
+        self.tokens = self.MAX_TOKENS
+        self.updated_at = time.monotonic()
+
+    async def get(self, *args, **kwargs):
+        await self.wait_for_token()
+        return self.session.get(*args, **kwargs)
+
+    async def wait_for_token(self):
+        while self.tokens <= 1:
+            self.add_new_tokens()
+            await asyncio.sleep(1)
+        self.tokens = self.tokens - 1
+    
+    def add_new_tokens(self):
+        now = time.monotonic()
+        time_since_update = now - self.updated_at
+        new_tokens = time_since_update * self.RATE
+        if self.tokens + new_tokens >= 1:
+            self.tokens = min(self.tokens + new_tokens, self.MAX_TOKENS)
+            self.updated_at = now
+
+    async def close(self):
+        await self.session.close()
 
 async def search_pubmed(term, search_author=False, retmax=250):
     if search_author:
@@ -94,7 +128,8 @@ async def search_pubmed(term, search_author=False, retmax=250):
     else:
         print('search pubmed term: ' + term)
     payload = {'db': 'pubmed', 'retmode': 'json', 'term': term, 'retmax': retmax}
-    response = await aiohttp.get('http://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi', params=payload)
-    response_text = await response.text()
-    await response.release()
-    return [pmid for pmid in json.loads(response_text)['esearchresult']['idlist']]
+    pubmed_search_url = 'http://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi'
+    async with aiohttp.ClientSession() as session:
+        async with session.get(pubmed_search_url, params=payload) as response:
+            response_json = await response.json()
+    return [pmid for pmid in response_json['esearchresult']['idlist']]
