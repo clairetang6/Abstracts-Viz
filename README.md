@@ -3,7 +3,8 @@ Visualize a scientist's entire publication history and see how papers cluster in
 
 Check it out at [pubviz.com](http://pubviz.com)!
 
-![The resulting graph for nobel laureate Eric Kandel!](kandel.png) 
+Below is the visualization when you search for my PhD thesis adivor, a neurosurgeon who also studies speech perception and production. His publications cluster into two main groups, those related to epilepsy and neurosurgery and those related to speech.
+![The resulting graph for my PhD thesis advisor!](chang.png) 
 
 This web app is built using [Python3](https://docs.python.org/3/) and [aiohttp](http://aiohttp.readthedocs.org/en/stable/), enabling asynchronous calls to the [PubMed](http://www.ncbi.nlm.nih.gov/pubmed) API to get the full text of a scientist's abstracts.
 
